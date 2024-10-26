@@ -1,0 +1,137 @@
+---
+title: "eda_draft"
+output: pdf_document
+date: "2024-10-26"
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(knitr)  
+library(kableExtra)
+library(tidyverse)
+library(stringr)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(lme4)
+```
+
+
+```{r}
+# Load data
+rituals <- read.csv("rituals.csv")
+```
+
+
+# First Question EDA 
+
+```{r}
+# Create a contingency table using the subset of the dataset
+table_result <- table(rituals$Rite_of_passage, 
+                      rituals$Purification_or_Cleansing)
+
+# Convert the table to a data frame for easier plotting
+df_table <- as.data.frame(table_result)
+
+colnames(df_table) <- c("Ritual_Rite_of_Passage", "Purification_Cleansing", "Count")
+
+# Combine the two columns into one label (e.g., "Yes to Yes", "Yes to No")
+df_table$Combination <- paste(df_table$Ritual_Rite_of_Passage, df_table$Purification_Cleansing, sep = " to ")
+
+# Create the bar plot
+ggplot(df_table, aes(x = Combination, y = Count, fill = Combination)) +
+  geom_bar(stat = "identity") +  # Use stat = "identity" because we already have counts
+  labs(x = "Yes/No Combinations", y = "Count", 
+       title = "Counts of Yes/No Combinations (Rite of Passage and Purification or Cleansing)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(fill = "none")  # Remove the legend since we already have the labels on the x-axis
+```
+
+
+
+# Second Question (Independence and Correlation tests)  
+
+## Chi-square Test  
+
+Use Chi-square test for checking the independence between variables since the variables are binary or categorical.  
+
+```{r}
+# Independence of cultural rewards and purification or cleansing
+chisq.test(x = rituals$Reward, 
+           y = rituals$Purification_or_Cleansing)
+```
+
+```{r}
+# Independence of cultural rewards and ritual rite of passage
+chisq.test(x = rituals$Reward, 
+           y = rituals$Rite_of_passage)
+```
+
+```{r}
+# Independence of rewards and therapeutic rituals
+chisq.test(x = rituals$Reward,
+           y = rituals$Therapeutic)
+```
+
+Warning exists for the three correlation tests might due tto the reason of small dataset. By looking the results above, we can see that the p-values for each test are greater than 0. Notice that for chi square test, the null hypothesis is to assume that the variables are independent. Since the p-values are large, then we failed to reject the null hypothesis.  
+
+## Tetrachoric Correlation Test  
+
+Use Tetrachoric correlation test to check whether or not the variables are correlated with each other as if they would be measured on continuous scale.  
+
+```{r}
+# new data frame that contains rewards, rite of passage, therapeutic rituals and 
+# purification or cleansing
+tetra_data <- data.frame(Rite_of_passage = as.factor(rituals$Rite_of_passage), 
+                         Therapeutic = as.factor(rituals$Therapeutic), 
+                         Purification_or_Cleansing = as.factor(rituals$Purification_or_Cleansing), 
+                         Isolation = as.factor(rituals$Isolation_Reintegration), 
+                         Forgiveness = as.factor(rituals$Forgiveness))
+
+# tetra_matrix (not working)
+# tetrachoric(tetra_data)
+
+# test between rite of passage and therapeutic rituals
+tetrachoric(table(rituals$Rite_of_passage, rituals$Therapeutic))
+
+# test between rite of passage and purification or cleansing
+tetrachoric(table(rituals$Rite_of_passage, rituals$Purification_or_Cleansing))
+
+# test between rite of passage and isolation and reintegration
+tetrachoric(table(rituals$Rite_of_passage, rituals$Isolation_Reintegration))
+
+# test between rite of passage and Forgiveness
+tetrachoric(table(rituals$Rite_of_passage, rituals$Forgiveness))
+
+# test between therapeutic rituals and purification or cleansing
+tetrachoric(table(rituals$Therapeutic, rituals$Purification_or_Cleansing))
+
+# test between therapeutic rituals and isolation and reintegration
+tetrachoric(table(rituals$Therapeutic, rituals$Isolation_Reintegration))
+
+# test between therapeutic rituals and Forgiveness
+tetrachoric(table(rituals$Therapeutic, rituals$Forgiveness))
+
+# test between isolation and reintegration and Forgiveness
+tetrachoric(table(rituals$Isolation_Reintegration, rituals$Forgiveness))
+```
+Notice that the variables of therapeutic rituals and purification or cleansing, rite of passage and isolation and reintegration, therapeutic rituals and isolation and reintegration, and therapeutic rituals and forgiveness are highly correlated since the correlations are over 0.5. We might need to consider the above results for model fitting.  
+## Models
+
+### Question 1
+
+```{r}
+
+```
+
+
+### Question 2  
+
+```{r}
+# model  
+model_1 <- glmer(factor(Reward) ~ (1 |Culture) + Purification_or_Cleansing + 
+                   Isolation_Reintegration + Forgiveness, rituals, 
+                 family = binomial(link = "logit"))
+summary(model_1)
+```
